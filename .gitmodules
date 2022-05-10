@@ -1,0 +1,9 @@
+[submodule "bot/voltz-core"]
+	path = bot/voltz-core
+	url = https://github.com/Voltz-Protocol/voltz-core
+[submodule "bot/v1-subgraph"]
+	path = bot/v1-subgraph
+	url = https://github.com/Voltz-Protocol/v1-subgraph
+[submodule "bot/v1-sdk"]
+	path = bot/v1-sdk
+	url = https://github.com/Voltz-Protocol/v1-sdk
