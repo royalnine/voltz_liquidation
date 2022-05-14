@@ -21,3 +21,4 @@ services:
       - AWS_DEFAULT_REGION=eu-west-1
       - AWS_ACCESS_KEY_ID=local_id
       - AWS_SECRET_ACCESS_KEY=local_key
+      - LOCALSTACK_HOSTNAME=localstack

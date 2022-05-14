@@ -3,6 +3,7 @@ import boto3
 import logging
 import schedule
 import time
+import os
 from http import HTTPStatus
 
 
@@ -73,9 +74,10 @@ def get_or_create_table() -> boto3.resource:
   """
   Method to get or create dynamodb table
   """
+  hostname = os.environ["LOCALSTACK_HOSTNAME"] # get rid when image is on ECR
   dynamodb = boto3.resource(
     'dynamodb',
-    endpoint_url='http://localhost:4566' # get rid of this when putting table on AWS
+    endpoint_url=f"http://{hostname}:4566" # get rid when image is on ECR
   )
   table = dynamodb.Table('Positions')
   try:
