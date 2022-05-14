@@ -41,7 +41,7 @@ def fetch_and_write_positions(url: str, table: boto3.resource):
     offset += count
 
 
-def fetch_positions(url: str, count: int, offset: int):
+def fetch_positions(url: str, count: int, offset: int) -> dict:
   """
   Method to fetch voltz positions from the graph api
   """

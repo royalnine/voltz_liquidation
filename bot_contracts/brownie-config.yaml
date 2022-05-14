@@ -7,7 +7,7 @@ project_structure:
     tests: tests
 
 networks:
-    default: kovan
+    default: hardhat
     kovan:
         gas_limit: max
         gas_buffer: 1
@@ -25,6 +25,15 @@ networks:
         priority_fee: null
         reverting_tx_gas_limit: false
         default_contract_owner: false
+    hardhat:
+        gas_limit: max
+        gas_buffer: 1
+        gas_price: 0
+        max_fee: null
+        priority_fee: null
+        reverting_tx_gas_limit: max
+        default_contract_owner: true
+        cmd_settings: null
 
 compiler:
     evm_version: null
@@ -62,6 +71,7 @@ hypothesis:
         shrink: true
 
 autofetch_sources: false
-dependencies: null
+dependencies:
+    - OpenZeppelin/openzeppelin-contracts@4.5.0
 dev_deployment_artifacts: false
 dotenv: .env
