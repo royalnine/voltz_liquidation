@@ -8,7 +8,6 @@ from http import HTTPStatus
 
 
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.NOTSET)
 logging.basicConfig(level=logging.INFO)
 
 
@@ -31,6 +30,9 @@ BASE_QUERY = """{{
 
 
 def fetch_and_write_positions(url: str, table: boto3.resource):
+  """
+  Fetch positions -> write to dynamodb
+  """
   count: int = 1000
   offset: int = 0
   while True:
@@ -69,7 +71,6 @@ def write_positions(positions: dict, table: boto3.resource):
     logger.exception(e)
 
 
-
 def get_or_create_table() -> boto3.resource:
   """
   Method to get or create dynamodb table
@@ -106,15 +107,20 @@ def get_or_create_table() -> boto3.resource:
   return table
 
 
-def run_client():
+def run():
+  """
+  Driver
+  """
   table = get_or_create_table()
   fetch_and_write_positions(URL, table)
 
 
 if __name__ == '__main__':
   logger.info("Starting account manager")
-  schedule.every(2).minutes.do(run_client)
+  schedule.every(2).minutes.do(run)
   
   while True:
     schedule.run_pending()
     time.sleep(1)
+
+  # run()
