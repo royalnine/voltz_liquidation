@@ -112,9 +112,9 @@ def run_client():
 
 
 if __name__ == '__main__':
-  # schedule.every(2).minutes.do(run_client)
+  schedule.every(2).minutes.do(run_client)
 
-  # while True:
-  #   schedule.run_pending()
-  #   time.sleep(1)
-  run_client()
+  while True:
+    schedule.run_pending()
+    time.sleep(1)
+  # run_client()
