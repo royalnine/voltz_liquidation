@@ -112,8 +112,9 @@ def run_client():
 
 
 if __name__ == '__main__':
+  logger.info("Starting account manager")
   schedule.every(2).minutes.do(run_client)
-
+  
   while True:
     schedule.run_pending()
     time.sleep(1)
