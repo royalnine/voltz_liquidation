@@ -57,4 +57,21 @@ contract LiquidationBot is ILiquidationBot, Ownable {
         return liquidationReward;
     }
 
+    function getPositionMarginRequirement(
+        address _owner,
+        int24 _tickLower,
+        int24 _tickUpper,
+        bool _isLM
+    ) external returns (uint256){
+        require(marginEngineAddress != address(0), "margin engine address has to be set");
+        // make a call to marginEngine.liquidatePosition(_owner, _tickLower, _tickUpper);
+        (bool success, bytes memory returnData) = marginEngineAddress.call(abi.encodeWithSignature("getPositionMarginRequirement(_owner, _tickLower, _tickUpper, _isLM)", _owner, _tickLower, _tickUpper, _isLM));
+        
+        require(success, "call marginEngine.getPositionMarginRequirement(_owner, _tickLower, _tickUpper, _isLM) failed");
+        (uint marginRequirement) = abi.decode(returnData, (uint));
+
+        return marginRequirement;
+
+    }
+
 }

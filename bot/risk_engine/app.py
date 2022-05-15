@@ -85,6 +85,6 @@ def run():
 
 if __name__ == '__main__':
     logger.info("Starting and sleeping for 20 secs")
-    time.sleep(20) # sleep for 5 secs in the beginning to allow account manager to create resources
+    time.sleep(20) # sleep for 20 secs in the beginning to allow account manager to create resources
     logger.info("Woke up and running")
     run()
