@@ -1,3 +1,4 @@
+from wsgiref.handlers import format_date_time
 import requests
 import boto3
 import logging
@@ -7,8 +8,13 @@ import os
 from http import HTTPStatus
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("account_manager")
 logging.basicConfig(level=logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s : %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 URL = 'https://api.thegraph.com/subgraphs/name/voltzprotocol/v1-2'
@@ -80,10 +86,10 @@ def get_or_create_table() -> boto3.resource:
     'dynamodb',
     endpoint_url=f"http://{hostname}:4566" # get rid when image is on ECR
   )
-  table = dynamodb.Table('liquidation-bot-positions-queue')
+  table = dynamodb.Table('liquidation-bot-positions-table')
   try:
     table.table_status
-    logger.info("table 'liquidation-bot-positions-queue' already exists")
+    logger.info("table 'liquidation-bot-positions-table' already exists")
   except dynamodb.meta.client.exceptions.ResourceNotFoundException:
     dynamodb.create_table(
       AttributeDefinitions=[
@@ -92,7 +98,7 @@ def get_or_create_table() -> boto3.resource:
             'AttributeType': 'S'
         },
     ],
-    TableName='liquidation-bot-positions-queue',
+    TableName='liquidation-bot-positions-table',
     KeySchema=[
         {
             'AttributeName': 'id',
@@ -103,7 +109,7 @@ def get_or_create_table() -> boto3.resource:
         'ReadCapacityUnits': 123,
         'WriteCapacityUnits': 123
     },)
-    logger.info("created 'liquidation-bot-positions-queue' table")
+    logger.info("created 'liquidation-bot-positions-table' table")
   return table
 
 
@@ -141,7 +147,7 @@ if __name__ == '__main__':
   queue = get_or_create_queue()
   logger.info("SQS obtained")
   
-  schedule.every(30).seconds.do(run, table=table, queue=queue)
+  schedule.every(90).seconds.do(run, table=table, queue=queue)
   
   while True:
     schedule.run_pending()
