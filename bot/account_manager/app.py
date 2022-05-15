@@ -29,7 +29,7 @@ BASE_QUERY = """{{
     }}"""
 
 
-def fetch_and_write_positions(url: str, table: boto3.resource):
+def fetch_and_write_positions(url: str, table: boto3.resource): ## TODO retrieve newly created or updated ids
   """
   Fetch positions -> write to dynamodb
   """
@@ -80,10 +80,10 @@ def get_or_create_table() -> boto3.resource:
     'dynamodb',
     endpoint_url=f"http://{hostname}:4566" # get rid when image is on ECR
   )
-  table = dynamodb.Table('Positions')
+  table = dynamodb.Table('liquidation-bot-positions-queue')
   try:
     table.table_status
-    logger.info("table 'Positions' already exists")
+    logger.info("table 'liquidation-bot-positions-queue' already exists")
   except dynamodb.meta.client.exceptions.ResourceNotFoundException:
     dynamodb.create_table(
       AttributeDefinitions=[
@@ -92,7 +92,7 @@ def get_or_create_table() -> boto3.resource:
             'AttributeType': 'S'
         },
     ],
-    TableName='Positions',
+    TableName='liquidation-bot-positions-queue',
     KeySchema=[
         {
             'AttributeName': 'id',
@@ -103,24 +103,48 @@ def get_or_create_table() -> boto3.resource:
         'ReadCapacityUnits': 123,
         'WriteCapacityUnits': 123
     },)
-    logger.info("created 'Positions' table")
+    logger.info("created 'liquidation-bot-positions-queue' table")
   return table
 
 
-def run():
+def get_or_create_queue() -> boto3.resource:
+  hostname = os.environ["LOCALSTACK_HOSTNAME"] # get rid when image is on ECR
+  sqs = boto3.resource(
+    'sqs',
+    endpoint_url=f"http://{hostname}:4566" # get rid when image is on ECR
+  )
+  try:
+    queue = sqs.get_queue_by_name(
+      QueueName='liquidation-bot-positions-queue',
+      # QueueOwnerAWSAccountId='string' add this when image on ECR
+    )
+  except sqs.meta.client.exceptions.QueueDoesNotExist:
+    queue = sqs.create_queue(
+      QueueName='liquidation-bot-positions-queue',
+    )
+  return queue
+
+
+def run(table: boto3.resource, queue: boto3.resource):
   """
   Driver
   """
-  table = get_or_create_table()
+  
   fetch_and_write_positions(URL, table)
+  queue.send_message(MessageBody='fetch_complete')
 
 
 if __name__ == '__main__':
   logger.info("Starting account manager")
-  schedule.every(2).minutes.do(run)
+  table = get_or_create_table()
+  logger.info("DDB table obtained")
+  queue = get_or_create_queue()
+  logger.info("SQS obtained")
+  
+  schedule.every(30).seconds.do(run, table=table, queue=queue)
   
   while True:
     schedule.run_pending()
     time.sleep(1)
 
-  # run()
+  # run(table=table, queue=queue)
