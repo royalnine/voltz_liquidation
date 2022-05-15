@@ -147,10 +147,10 @@ if __name__ == '__main__':
   queue = get_or_create_queue()
   logger.info("SQS obtained")
   
-  schedule.every(90).seconds.do(run, table=table, queue=queue)
+  # schedule.every(90).seconds.do(run, table=table, queue=queue)
   
-  while True:
-    schedule.run_pending()
-    time.sleep(1)
+  # while True:
+  #   schedule.run_pending()
+  #   time.sleep(1)
 
-  # run(table=table, queue=queue)
+  run(table=table, queue=queue)

@@ -49,7 +49,7 @@ contract LiquidationBot is ILiquidationBot, Ownable {
     ) external onlyOwner returns (uint256) {
         require(marginEngineAddress != address(0), "margin engine address has to be set");
         // make a call to marginEngine.liquidatePosition(_owner, _tickLower, _tickUpper);
-        (bool success, bytes memory returnData) = marginEngineAddress.call(abi.encodeWithSignature("liquidatePosition(_owner, _tickLower, _tickUpper)", _owner, _tickLower, _tickUpper));
+        (bool success, bytes memory returnData) = marginEngineAddress.call(abi.encodeWithSignature("liquidatePosition(address,int24,int24)", _owner, _tickLower, _tickUpper));
         
         require(success, "call marginEngine.liquidatePosition(_owner, _tickLower, _tickUpper) failed");
         (uint liquidationReward) = abi.decode(returnData, (uint));
@@ -65,7 +65,7 @@ contract LiquidationBot is ILiquidationBot, Ownable {
     ) external returns (uint256){
         require(marginEngineAddress != address(0), "margin engine address has to be set");
         // make a call to marginEngine.liquidatePosition(_owner, _tickLower, _tickUpper);
-        (bool success, bytes memory returnData) = marginEngineAddress.call(abi.encodeWithSignature("getPositionMarginRequirement(_owner, _tickLower, _tickUpper, _isLM)", _owner, _tickLower, _tickUpper, _isLM));
+        (bool success, bytes memory returnData) = marginEngineAddress.call(abi.encodeWithSignature("getPositionMarginRequirement(address,int24,int24,bool)", _owner, _tickLower, _tickUpper, _isLM)); // make static call and catch the error
         
         require(success, "call marginEngine.getPositionMarginRequirement(_owner, _tickLower, _tickUpper, _isLM) failed");
         (uint marginRequirement) = abi.decode(returnData, (uint));
