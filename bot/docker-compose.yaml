@@ -15,20 +15,20 @@ services:
       - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
   
-  # account_manager:
-  #   build: account_manager
-  #   environment:
-  #     - AWS_DEFAULT_REGION=eu-west-1
-  #     - AWS_ACCESS_KEY_ID=local_id
-  #     - AWS_SECRET_ACCESS_KEY=local_key
-  #     - LOCALSTACK_HOSTNAME=localstack
+  account_manager:
+    build: account_manager
+    environment:
+      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_ACCESS_KEY_ID=local_id
+      - AWS_SECRET_ACCESS_KEY=local_key
+      - LOCALSTACK_HOSTNAME=localstack
 
-  # risk_engine:
-  #   build: risk_engine
-  #   environment:
-  #     - AWS_DEFAULT_REGION=eu-west-1
-  #     - AWS_ACCESS_KEY_ID=local_id
-  #     - AWS_SECRET_ACCESS_KEY=local_key
-  #     - LOCALSTACK_HOSTNAME=localstack
+  risk_engine:
+    build: risk_engine
+    environment:
+      - AWS_DEFAULT_REGION=eu-west-1
+      - AWS_ACCESS_KEY_ID=local_id
+      - AWS_SECRET_ACCESS_KEY=local_key
+      - LOCALSTACK_HOSTNAME=localstack
 
   

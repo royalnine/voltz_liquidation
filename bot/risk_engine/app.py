@@ -80,8 +80,9 @@ def delete_message(message: Any, queue: boto3.resource):
 
 def find_liquidatable_positions(w3: Web3, table: boto3.resource) -> pd.DataFrame:
     dataframe = create_dataframe(table)
-    dataframe['LiquidationMargin'] = dataframe.apply(lambda row: get_liquidation_margin(w3, dataframe['owner'], dataframe['tickLower'], dataframe['tickUpper']))
-    breakpoint()
+    print(dataframe)
+    # dataframe['LiquidationMargin'] = dataframe.apply(lambda row: get_liquidation_margin(w3, dataframe['owner'], dataframe['tickLower'], dataframe['tickUpper']))
+    
     # filter
     # return filtered_dataframe
     # return

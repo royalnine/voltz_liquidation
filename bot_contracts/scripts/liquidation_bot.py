@@ -2,9 +2,9 @@ from brownie import LiquidationBot, accounts, Contract
 
 def main():
     # test_account = accounts.load('test_account')
-    # liquidation_bot = LiquidationBot.deploy({'from': accounts[0], 'gas_price': 9463996})
-    # liquidation_bot.setMarginEngineAddress('0x15e3484EB4Ae66B9186699DB76024cBC363c1f2B', {'gas_price': 8330283})
-    tx = accounts[0].deploy(LiquidationBot)
+    liquidation_bot = LiquidationBot.deploy({'from': accounts[0], 'gas_price': 9463996})
+    liquidation_bot.setMarginEngineAddress('0x15e3484EB4Ae66B9186699DB76024cBC363c1f2B', {'gas_price': 8330283})
+    # tx = accounts[0].deploy(LiquidationBot)
     liquidation_reward = liquidation_bot.getLiquidationReward()
 
     print(f"before liquidation_reward = {liquidation_reward}")
