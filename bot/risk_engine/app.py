@@ -24,10 +24,10 @@ logger.addHandler(ch)
 
 
 ABI = '../../bot_contracts/build/contracts/LiquidationBot.json'
-BOT_CONTRACT = '0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d'
+BOT_CONTRACT = '0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d' # TODO deploy on kovan
 NAME_TO_PROVIDER_URL = {
     "localhost": "http://127.0.0.1:8545",
-    "kovan": "https://kovan.infura.io/v3/4155eba497904a7eb58ffda08dd5a28a",
+    "kovan": "https://kovan.infura.io/v3/4155eba497904a7eb58ffda08dd5a28a", # make env variable
 }
 
 def get_table() -> boto3.resource:
@@ -80,8 +80,9 @@ def delete_message(message: Any, queue: boto3.resource):
 
 def find_liquidatable_positions(w3: Web3, table: boto3.resource) -> pd.DataFrame:
     dataframe = create_dataframe(table)
+    dataframe['LiquidationMargin'] = dataframe.apply(lambda row: get_liquidation_margin(w3, dataframe['owner'], dataframe['tickLower'], dataframe['tickUpper']))
     breakpoint()
-    ## apply methods + filter
+    # filter
     # return filtered_dataframe
     # return
 
@@ -97,13 +98,13 @@ def get_liquidation_reward(w3: Web3) -> int:
     return reward
 
 
-def get_liquidation_margin(w3: Web3, owner: str, tick_lower: int, tick_upper: int) -> int:
+def get_liquidation_margin(w3: Web3, owner: dict, tick_lower: int, tick_upper: int) -> int:
     with open(ABI) as f:
         data = json.load(f)
 
     bot_contract = w3.eth.contract(BOT_CONTRACT, abi=data['abi'])
     get_positions_margin_requirement = bot_contract.get_function_by_signature('getPositionMarginRequirement(address,int24,int24,bool)')
-    owner = w3.toChecksumAddress(owner)
+    owner = w3.toChecksumAddress(owner['id'])
     margin = get_positions_margin_requirement(owner, tick_lower, tick_upper, True).call()
     return margin
 
@@ -131,8 +132,8 @@ def run():
 
 if __name__ == '__main__':
     
-    # logger.info("Starting and sleeping for 20 secs")
-    # time.sleep(20) # sleep for 20 secs in the beginning to allow account manager to create resources
-    # logger.info("Woke up and running")
+    logger.info("Starting and sleeping for 20 secs")
+    time.sleep(20) # sleep for 20 secs in the beginning to allow account manager to create resources
+    logger.info("Woke up and running")
     run()
     # get_liquidation_margin(w3, '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', 0, 3000)

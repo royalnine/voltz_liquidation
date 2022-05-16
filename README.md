@@ -9,3 +9,9 @@
 
 1) Deploy liquidator bot contract
 2) Take address and put into /scripts
+
+
+
+LOCALSTACK_HOSTNAME=localhost /home/pochanga/.pyenv/versions/3.9.5/envs/account_manager/bin/python /home/pochanga/money-hack/liquidation_bot/bot/account_manager/app.py
+
+LOCALSTACK_HOSTNAME=localhost /home/pochanga/.pyenv/versions/voltz-bot/envs/risk_engine/bin/python /home/pochanga/money-hack/liquidation_bot/bot/risk_engine/app.py

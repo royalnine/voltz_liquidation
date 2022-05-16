@@ -7,7 +7,7 @@ project_structure:
     tests: tests
 
 networks:
-    default: hardhat
+    default: kovan
     kovan:
         gas_limit: max
         gas_buffer: 1
@@ -16,7 +16,10 @@ networks:
         priority_fee: null
         reverting_tx_gas_limit: max
         default_contract_owner: true
-        cmd_settings: null
+        cmd_settings:
+            unlock:
+                - 0xfb3b87ef9A9914167F13B47Af2aB810149FBe543
+
     live:
         gas_limit: auto
         gas_buffer: 1.1

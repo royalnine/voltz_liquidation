@@ -31,6 +31,14 @@ BASE_QUERY = """{{
         owner {{
           id
         }}
+        marginUpdates{{
+          id
+          marginDelta
+        }}
+        isSettled
+        liquidations{{
+          id
+        }}
       }}
     }}"""
 
