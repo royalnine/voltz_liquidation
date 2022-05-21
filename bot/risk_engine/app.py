@@ -1,34 +1,30 @@
 import time
+from numpy import str_
 import pandas as pd
 import boto3
 import logging
 import os
-from typing import Any
+from typing import Any, Tuple
 from web3 import Web3
 import json
-
-
-"""
-Account #0: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 (10000 ETH)
-Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-"""
-
+from dotenv import load_dotenv
 
 logger = logging.getLogger("risk_engine")
 logging.basicConfig(level=logging.INFO)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 
-ABI = '../../bot_contracts/build/contracts/LiquidationBot.json'
-BOT_CONTRACT = '0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d' # TODO deploy on kovan
+load_dotenv()
+
+
+ABI = './LiquidationBot.json'
+BOT_CONTRACT = '0x8419c9b5a0ae26c49b691aa12136610546239b6b' # TODO deploy on kovan
 NAME_TO_PROVIDER_URL = {
     "localhost": "http://127.0.0.1:8545",
-    "kovan": "https://kovan.infura.io/v3/4155eba497904a7eb58ffda08dd5a28a", # make env variable
+    "kovan": f"https://kovan.infura.io/v3/{os.environ['KOVAN_INFURA_KEY']}", # make env variable
 }
+ACCOUNT = os.environ['ACCOUNT']
+PK = os.environ['PK']
+
 
 def get_table() -> boto3.resource:
     hostname = os.environ["LOCALSTACK_HOSTNAME"] # get rid when image is on ECR
@@ -78,36 +74,75 @@ def delete_message(message: Any, queue: boto3.resource):
     logger.info(f"deleted message {message.message_id}")
 
 
-def find_liquidatable_positions(w3: Web3, table: boto3.resource) -> pd.DataFrame:
-    dataframe = create_dataframe(table)
-    print(dataframe)
-    # dataframe['LiquidationMargin'] = dataframe.apply(lambda row: get_liquidation_margin(w3, dataframe['owner'], dataframe['tickLower'], dataframe['tickUpper']))
-    
-    # filter
-    # return filtered_dataframe
-    # return
-
-
-def get_liquidation_reward(w3: Web3) -> int:
+def get_position_margin_req(w3: Web3, owner: dict, tick_lower: int, tick_upper: int) -> int:
     with open(ABI) as f:
         data = json.load(f)
-
-    bot_contract = w3.eth.contract(BOT_CONTRACT, abi=data['abi'])
-
-    get_liquidation_reward_function = bot_contract.get_function_by_signature('getLiquidationReward()')
-    reward = get_liquidation_reward_function().call()
-    return reward
-
-
-def get_liquidation_margin(w3: Web3, owner: dict, tick_lower: int, tick_upper: int) -> int:
-    with open(ABI) as f:
-        data = json.load(f)
-
-    bot_contract = w3.eth.contract(BOT_CONTRACT, abi=data['abi'])
-    get_positions_margin_requirement = bot_contract.get_function_by_signature('getPositionMarginRequirement(address,int24,int24,bool)')
-    owner = w3.toChecksumAddress(owner['id'])
-    margin = get_positions_margin_requirement(owner, tick_lower, tick_upper, True).call()
+    owner = w3.toChecksumAddress(owner)
+    bot_contract = w3.eth.contract(w3.toChecksumAddress(BOT_CONTRACT), abi=data['abi'])
+    get_positions_margin_requirement = bot_contract.get_function_by_signature('getPositionMarginRequirement(address,int24,int24)')
+    margin = get_positions_margin_requirement(owner, tick_lower, tick_upper).call()
     return margin
+
+
+def _get_nonce(w3: Web3, owner: str):
+    return w3.eth.get_transaction_count(owner)
+
+
+def get_liquidation_margin(row, *, w3: Web3):
+    owner, tick_lower, tick_upper, margin = row['owner'], row['tickLower'], row['tickUpper'], row['margin']
+
+    liquidation_margin = get_position_margin_req(w3, owner, int(tick_lower), int(tick_upper))
+    
+    if liquidation_margin:
+        margin_health = int(margin)/liquidation_margin
+    else:
+        margin_health = 100
+
+    row['liquidationMargin'] = liquidation_margin
+    row['marginHealth'] = margin_health
+
+    return row
+
+
+def find_liquidatable_positions(table: boto3.resource, w3: Web3) -> pd.DataFrame:
+    logger.info("looking for positions to liquidate")
+    positions = create_dataframe(table)
+    positions = positions[positions['marginEngine'] == '0x14d8bc8f4833c01623a158a16cd3df31ec46a45d']
+    positions_with_liquidation_margin = positions.apply(get_liquidation_margin, axis=1, w3=w3)
+    logger.info("calculating liquidation margin")
+    positions_filtered_by_margin_delta = positions_with_liquidation_margin[positions_with_liquidation_margin['marginHealth'] < 1]
+    logger.info(f"found {len(positions_filtered_by_margin_delta)} liquidatable positions")
+    return positions_filtered_by_margin_delta
+
+
+def liquidate_position(row, *, w3: Web3) -> bytes:
+
+    owner, tick_lower, tick_upper = row['owner'], row['tickLower'], row['tickUpper']
+    with open(ABI) as f:
+        data = json.load(f)
+
+    abi = data['abi']
+
+    bot_owner = w3.toChecksumAddress(ACCOUNT)
+    owner = w3.toChecksumAddress(owner)
+    logger.info(f"liquidating {owner} position")
+    transaction = {
+        'gas': 10000000,
+        'nonce': _get_nonce(w3, bot_owner),
+        'from': bot_owner
+    }
+    if owner.lower() == '0x5A1bf94BF08f30E1cE0Ae91160c3FC4d2cd8D1d2'.lower():
+        bot_contract = w3.eth.contract(w3.toChecksumAddress(BOT_CONTRACT), abi=abi)
+        liquidate_position_function = bot_contract.get_function_by_signature('liquidatePosition(address,int24,int24)')
+        built_transaction = liquidate_position_function(owner, int(tick_lower), int(tick_upper)).buildTransaction(transaction)
+        signed_transaction = w3.eth.account.sign_transaction(built_transaction, PK)
+        tx_handle = w3.eth.send_raw_transaction(signed_transaction.rawTransaction)
+        return tx_handle
+    return None
+
+
+def liquidate(positions_to_liquidate, w3):
+    positions_to_liquidate.apply(liquidate_position, axis=1, w3=w3)
 
 
 def get_web3_provider(name: str) -> Web3:
@@ -124,11 +159,9 @@ def run():
 
     for message in poll_messages(queue):
         logger.info(f"message = {message}")
-        # delete_message(message, queue)
-        l_positions = find_liquidatable_positions(w3, table)
-        
-        # work on l_positions 
-        # TODO submit l_positions to lambdas to run liquidations
+        delete_message(message, queue)
+        positions_to_liquidate = find_liquidatable_positions(table, w3)
+        liquidate(positions_to_liquidate, w3)
 
 
 if __name__ == '__main__':
@@ -137,4 +170,3 @@ if __name__ == '__main__':
     time.sleep(20) # sleep for 20 secs in the beginning to allow account manager to create resources
     logger.info("Woke up and running")
     run()
-    # get_liquidation_margin(w3, '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', 0, 3000)

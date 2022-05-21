@@ -1,4 +1,3 @@
-from wsgiref.handlers import format_date_time
 import requests
 import boto3
 import logging
@@ -6,18 +5,22 @@ import schedule
 import time
 import os
 from http import HTTPStatus
+from dotenv import load_dotenv
+from position_serialiser import Position
+
+
+load_dotenv()
 
 
 logger = logging.getLogger("account_manager")
 logging.basicConfig(level=logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s : %(message)s")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 
 URL = 'https://api.thegraph.com/subgraphs/name/voltzprotocol/v1-2'
+
+
 BASE_QUERY = """{{
     positions(first: {count}, skip: {offset}) {{
         id
@@ -35,12 +38,29 @@ BASE_QUERY = """{{
           id
           marginDelta
         }}
-        isSettled
         liquidations{{
           id
         }}
+        amm{{
+          id
+          marginEngine{{
+            id
+          }}
+        }}
       }}
     }}"""
+
+
+def get_position_dataclass(position: dict) -> Position:
+  return Position(
+    id=position['id'],
+    tickLower=position['tickLower'],
+    tickUpper=position['tickUpper'],
+    margin=position['margin'],
+    owner=position['owner']['id'],
+    liquidations=position['liquidations'],
+    marginEngine=position['amm']['marginEngine']['id'],
+  ) 
 
 
 def fetch_and_write_positions(url: str, table: boto3.resource): ## TODO retrieve newly created or updated ids
@@ -62,7 +82,7 @@ def fetch_positions(url: str, count: int, offset: int) -> dict:
   Method to fetch voltz positions from the graph api
   """
   resp = requests.post(url, json={'query': BASE_QUERY.format(count=count, offset=offset)})
-  
+
   if resp.status_code == HTTPStatus.OK:
     positions = resp.json()['data']['positions'] 
     logger.info(f"fetched {count} positions with {offset} offset")
@@ -79,7 +99,8 @@ def write_positions(positions: dict, table: boto3.resource):
   try:
     with table.batch_writer() as batch:
       for position in positions:
-        batch.put_item(position)
+        pos = get_position_dataclass(position)
+        batch.put_item(pos.to_dict())
     logger.info("wrote positions to db")
   except Exception as e:
     logger.exception(e)
@@ -154,11 +175,11 @@ if __name__ == '__main__':
   logger.info("DDB table obtained")
   queue = get_or_create_queue()
   logger.info("SQS obtained")
-  
-  # schedule.every(90).seconds.do(run, table=table, queue=queue)
-  
-  # while True:
-  #   schedule.run_pending()
-  #   time.sleep(1)
 
   run(table=table, queue=queue)
+  
+  schedule.every(30).seconds.do(run, table=table, queue=queue)
+  
+  while True:
+    schedule.run_pending()
+    time.sleep(1)

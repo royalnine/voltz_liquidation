@@ -28,6 +28,7 @@ networks:
         priority_fee: null
         reverting_tx_gas_limit: false
         default_contract_owner: false
+
     hardhat:
         gas_limit: max
         gas_buffer: 1

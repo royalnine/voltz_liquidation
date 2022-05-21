@@ -34,6 +34,7 @@ protobuf==3.20.1
 pycryptodome==3.14.1
 pyrsistent==0.18.1
 python-dateutil==2.8.2
+python-dotenv==0.20.0
 pytz==2022.1
 requests==2.27.1
 rlp==2.0.1

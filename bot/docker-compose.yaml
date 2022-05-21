@@ -14,7 +14,7 @@ services:
     volumes:
       - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-  
+
   account_manager:
     build: account_manager
     environment:
