@@ -1,12 +1,12 @@
 import time
-from numpy import str_
 import pandas as pd
 import boto3
 import logging
 import os
-from typing import Any, Tuple
+from typing import Any
 from web3 import Web3
 import json
+from boto3.dynamodb.conditions import Attr
 from dotenv import load_dotenv
 
 logger = logging.getLogger("risk_engine")
@@ -22,6 +22,7 @@ NAME_TO_PROVIDER_URL = {
     "localhost": "http://127.0.0.1:8545",
     "kovan": f"https://kovan.infura.io/v3/{os.environ['KOVAN_INFURA_KEY']}", # make env variable
 }
+MARGIN_ENGINE = '0x14d8bc8f4833c01623a158a16cd3df31ec46a45d'
 ACCOUNT = os.environ['ACCOUNT']
 PK = os.environ['PK']
 
@@ -50,7 +51,8 @@ def get_queue() -> boto3.resource:
 
 
 def create_dataframe(table: boto3.resource) -> pd.DataFrame:
-    response = table.scan()
+    response = table.scan(FilterExpression=Attr("marginEngine").eq(MARGIN_ENGINE))
+    logger.info(f"read {len(response['Items'])} items off ddb")
     dataframe = pd.DataFrame(response['Items'])
     return dataframe
 
@@ -107,9 +109,8 @@ def get_liquidation_margin(row, *, w3: Web3):
 def find_liquidatable_positions(table: boto3.resource, w3: Web3) -> pd.DataFrame:
     logger.info("looking for positions to liquidate")
     positions = create_dataframe(table)
-    positions = positions[positions['marginEngine'] == '0x14d8bc8f4833c01623a158a16cd3df31ec46a45d']
-    positions_with_liquidation_margin = positions.apply(get_liquidation_margin, axis=1, w3=w3)
     logger.info("calculating liquidation margin")
+    positions_with_liquidation_margin = positions.apply(get_liquidation_margin, axis=1, w3=w3)
     positions_filtered_by_margin_delta = positions_with_liquidation_margin[positions_with_liquidation_margin['marginHealth'] < 1]
     logger.info(f"found {len(positions_filtered_by_margin_delta)} liquidatable positions")
     return positions_filtered_by_margin_delta
@@ -131,14 +132,16 @@ def liquidate_position(row, *, w3: Web3) -> bytes:
         'nonce': _get_nonce(w3, bot_owner),
         'from': bot_owner
     }
-    if owner.lower() == '0x5A1bf94BF08f30E1cE0Ae91160c3FC4d2cd8D1d2'.lower():
+    try:
         bot_contract = w3.eth.contract(w3.toChecksumAddress(BOT_CONTRACT), abi=abi)
         liquidate_position_function = bot_contract.get_function_by_signature('liquidatePosition(address,int24,int24)')
         built_transaction = liquidate_position_function(owner, int(tick_lower), int(tick_upper)).buildTransaction(transaction)
         signed_transaction = w3.eth.account.sign_transaction(built_transaction, PK)
         tx_handle = w3.eth.send_raw_transaction(signed_transaction.rawTransaction)
         return tx_handle
-    return None
+    except:
+        logger.info(f"error liquidating owner {owner}")
+        return None
 
 
 def liquidate(positions_to_liquidate, w3):
