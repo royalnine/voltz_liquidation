@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
   run(table=table, queue=queue)
   
-  schedule.every(30).seconds.do(run, table=table, queue=queue)
+  schedule.every(90).seconds.do(run, table=table, queue=queue)
   
   while True:
     schedule.run_pending()
