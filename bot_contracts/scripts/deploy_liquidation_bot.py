@@ -30,5 +30,6 @@ transaction = {
 deployment = liq.constructor(margin_engine).buildTransaction(transaction)
 signed_transaction = w3.eth.account.sign_transaction(deployment, private_key)
 result = w3.eth.send_raw_transaction(signed_transaction.rawTransaction)
+tx_receipt = w3.eth.wait_for_transaction_receipt(result)
 
-breakpoint()
+print(tx_receipt['contractAddress'])
