@@ -17,12 +17,14 @@ load_dotenv()
 
 
 ABI = './LiquidationBot.json'
-BOT_CONTRACT = '0x8419c9b5a0ae26c49b691aa12136610546239b6b' # TODO deploy on kovan
 NAME_TO_PROVIDER_URL = {
     "localhost": "http://127.0.0.1:8545",
     "kovan": f"https://kovan.infura.io/v3/{os.environ['KOVAN_INFURA_KEY']}", # make env variable
 }
-MARGIN_ENGINE = '0x14d8bc8f4833c01623a158a16cd3df31ec46a45d'
+
+
+BOT_CONTRACT = os.environ['BOT_CONTRACT'] # TODO deploy on kovan
+MARGIN_ENGINE = os.environ['MARGIN_ENGINE']
 ACCOUNT = os.environ['ACCOUNT']
 PK = os.environ['PK']
 
@@ -154,7 +156,7 @@ def get_web3_provider(name: str) -> Web3:
 
 
 def run():
-    w3 = get_web3_provider("kovan") ## TODO Change to infura
+    w3 = get_web3_provider("kovan") 
     table = get_table()
     logger.info("DDB table obtained")
     queue = get_queue()
