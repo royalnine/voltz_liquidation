@@ -18,4 +18,4 @@ pip install python-dotenv
 python ./scripts/deploy_liquidation_bot.py
 ```
  
-remember the output contract address this is needed to run the bot
+remember the output contract address, this will be needed to run the bot
