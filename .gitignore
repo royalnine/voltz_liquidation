@@ -5,3 +5,6 @@ __pycache__
 build/
 reports/
 .python-version
+voltz-core/
+v1-subgraph/
+v1-sdk/
