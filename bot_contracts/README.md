@@ -12,7 +12,8 @@ WEB3_INFURA_PROJECT_ID=PROJECT_ID_FROM_INFURA
 
 ## Deploying the contract
 
-```pip install web3
+```
+pip install web3
 pip install python-dotenv
 python ./scripts/deploy_liquidation_bot.py
 ```
